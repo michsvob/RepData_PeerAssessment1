@@ -1,25 +1,102 @@
+```{r}
+Sys.setlocale("LC_TIME", "English")
+```
+
+
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template"
+author: "Michal Svoboda"
+date: "26 června 2016"
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
+## Getting and processing the data 
+
+activityData are downloaded from <href>https://d396qusza40orc.cloudfront.net/repactivityData%2FactivityData%2Factivity.zip</href>, unzipped
+and loaded. The intervals are converted from integer representation to POSIXct representation.
+
+```{r load,cache=TRUE}
+#download.file("https://d396qusza40orc.cloudfront.net/repactivityData%2FactivityData%2Factivity.zip","activityactivityData")
+#unzip("activityactivityData")
+#commented out as the link stopped working
+
+activityData<-read.csv("activity.csv")
+activityData$time<-as.POSIXct(strptime(substr(as.character(activityData$interval+10000),2,5),format="%H%M"))
+
+```
+
+## Steps per day
+
+Split the activityData into days and make a histogram. Also calculate mean and median. Note that missing
+activityData are removed from the statistics.
+
+```{r steps per day}
+total.steps.per.day<-tapply(activityData$steps,activityData$date,sum,na.rm=FALSE)
+hist(total.steps.per.day)
+```
 
 
+```{r,FALSE}
+mean<-mean(total.steps.per.day,na.rm=TRUE)
+median<-median(total.steps.per.day,na.rm=TRUE)
+```
+Mean is `r mean` and median is `r median`.
 
-## What is mean total number of steps taken per day?
+##steps.patternerage daily steps pattern
+
+Count steps.patternerage steps in 5-minute intervals and make a plot of steps.patternerage daily pattern.
+Also get the interval with highest number of steps.
+
+```{r} 
+library(dplyr)
+steps.pattern<-summarize(group_by(activityData,time),steps=mean(steps,na.rm=TRUE))
+plot(steps.pattern,type="l",main="Number of steps in 5-minute intervals")
+#find at which time there were most steps recorded
+steps.pattern$time[steps.pattern$steps==max(steps.pattern$steps)]
+```
+
+##Imputing missing values
+
+Count the total number of missing values, choose imputing strategy (intervals with missing values 
+will be replaced by a mean of this 5minute interval of all the valid days), show histogram of newly 
+made dataset, calculate mean and median.
+```{r imputing}
+sum(is.na(activityData$steps))
+
+#replace NAs by a typical 5minute inverval
+impute<-function(interv){
+    mean(activityData$steps[activityData$interval==interv],na.rm=TRUE)
+}
+
+activityData2<-activityData
+activityData2$steps[is.na(activityData2$steps)]<-impute(activityData2$interval[is.na(activityData2$steps)])
+
+total.steps.per.day2<-tapply(activityData2$steps,activityData2$date,sum,na.rm=FALSE)
+hist(total.steps.per.day2)
+mean2<-mean(total.steps.per.day2)
+median2<-median(total.steps.per.day2)
+
+```
+Mean is `r mean2` and median is `r median2`. Not a big change from previous mean `r mean` and median `r median`.
+
+##Weekend vs weekday
+
+```{r}
 
 
+#identify weekends or weekdays
+activityData$weekday<-sapply(activityData$date,function(x){if(weekdays(as.Date(x))%in%c("Saturday","Sunday")){"Weekend"} else "Weekday"})
 
-## What is the average daily activity pattern?
+par(mfrow=c(2,1))
+steps.pattern.weekend<-summarize(group_by(activityData[activityData$weekday=="Weekend",],time),steps=mean(steps,na.rm=TRUE))
+steps.pattern.weekday<-summarize(group_by(activityData[activityData$weekday=="Weekday",],time),steps=mean(steps,na.rm=TRUE))
 
+plot(steps.pattern.weekday,type="l",main="Weekday",ylim=c(0,250))
+plot(steps.pattern.weekend,type="l",main="Weekend",ylim=c(0,250))
 
+```
 
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
